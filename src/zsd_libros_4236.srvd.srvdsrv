@@ -1,0 +1,7 @@
+@EndUserText.label: 'Service Definicion 4236'
+define service Zsd_libros_4236 {
+  expose zc_libros_4236     as Libros;
+  expose ZC_clientes_4236   as Clientes;
+  expose zc_categorias_4236 as Categorias;
+  expose zc_clnts_lib_4236  as ClientesLib;
+}
