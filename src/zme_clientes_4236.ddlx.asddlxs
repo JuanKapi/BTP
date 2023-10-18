@@ -29,23 +29,24 @@ annotate entity ZC_clientes_4236 with
                  targetQualifier: 'DetallesCliente',
                  position: 10}
               ],
+  //--------------------------------------------------
        lineItem: [{ position: 10,
                     importance: #HIGH }],
        fieldGroup: [{ qualifier: 'DetallesCliente',
-                      position: 10 }]
-        }
+                      position: 10 }]}
   IdCliente;
-  @UI : { lineItem: [{ position: 20,
-                       importance: #HIGH }],
-           fieldGroup: [{ qualifier: 'DetallesCliente',
-                          position: 20 }]
-        }
-  Acceso;
-  @UI : { lineItem: [{ position: 20,
-                       importance: #HIGH }],
-           fieldGroup: [{ qualifier: 'DetallesCliente',
-                          position: 30 }]
-        }
-  Email;
 
+  //--------------------------------------------------
+  @UI : { lineItem: [{ position: 20,
+                       importance: #HIGH }],
+           fieldGroup: [{ qualifier: 'DetallesCliente',
+                          position: 20 }]}
+  Acceso;
+  //--------------------------------------------------
+  @UI : { lineItem: [{ position: 20,
+                       importance: #HIGH }],
+           fieldGroup: [{ qualifier: 'DetallesCliente',
+                          position: 30 }]}
+  Email;
+  //--------------------------------------------------
 }
