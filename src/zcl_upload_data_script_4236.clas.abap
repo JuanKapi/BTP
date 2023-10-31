@@ -11,7 +11,9 @@ ENDCLASS.
 
 
 
-CLASS zcl_upload_data_script_4236 IMPLEMENTATION.
+CLASS ZCL_UPLOAD_DATA_SCRIPT_4236 IMPLEMENTATION.
+
+
   METHOD if_oo_adt_classrun~main.
 
 *Draft fields
@@ -215,8 +217,4 @@ CLASS zcl_upload_data_script_4236 IMPLEMENTATION.
     "Check result in console
     out->write( 'DONE!' ).
   endmethod.
-
-
-
-
 ENDCLASS.
