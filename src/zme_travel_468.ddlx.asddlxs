@@ -1,9 +1,5 @@
 @Metadata.layer: #CORE
-@UI: { headerInfo: { typeName: 'Travel',
-                     typeNamePlural: 'Travels',
-                     title: { type: #STANDARD, value: 'TravelID' } },
-       presentationVariant: [{ sortOrder: [{ by: 'TravelID', direction: #DESC }], visualizations: [{type: #AS_LINEITEM}]  }] }
-annotate entity ZC_TRAVEL_468 with
+annotate view ZC_TRAVEL_468 with
 {
   @UI.facet: [{ id:            'Travel',
                    purpose:       #STANDARD,
@@ -18,6 +14,7 @@ annotate entity ZC_TRAVEL_468 with
                    targetElement: '_Booking'}]
   @UI.hidden: true
   TravelUuid;
+
   @UI: { lineItem:       [ { position: 10, importance: #HIGH },
                            { type: #FOR_ACTION, dataAction: 'acceptTravel', label: 'Accept Travel' },
                            { type: #FOR_ACTION, dataAction: 'rejectTravel', label: 'Reject Travel' },
@@ -28,6 +25,7 @@ annotate entity ZC_TRAVEL_468 with
                            { type: #FOR_ACTION, dataAction: 'deductDiscount', label: 'Deduct Discount' } ],
          selectionField: [ { position: 10 } ] }
   TravelId;
+
   @UI: { lineItem:       [ { position: 20, importance: #HIGH } ] ,
          identification: [ { position: 20 } ],
          selectionField: [ { position: 20 } ] }
@@ -35,6 +33,7 @@ annotate entity ZC_TRAVEL_468 with
                                        element: 'AgencyID'  },
                                        useForValidation: true }]
   AgencyId;
+
   @UI: { lineItem:       [ { position: 30, importance: #HIGH } ] ,
          identification: [ { position: 30 } ],
          selectionField: [ { position: 30 } ] }
@@ -42,25 +41,32 @@ annotate entity ZC_TRAVEL_468 with
                                       element: 'CustomerID' },
                                       useForValidation: true}]
   CustomerId;
+
   @UI: { lineItem:       [ { position: 40, importance: #MEDIUM } ] ,
          identification: [ { position: 40 } ] }
   BeginDate;
+
   @UI: { lineItem:       [ { position: 50, importance: #MEDIUM } ] ,
          identification: [ { position: 50 } ] }
   EndDate;
+
   @UI: { lineItem:       [ { position: 60, importance: #MEDIUM } ] ,
          identification: [ { position: 60 } ] }
   BookingFee;
+
   @UI: { lineItem:       [ { position: 70, importance: #MEDIUM } ] ,
          identification: [ { position: 70 } ] }
   TotalPrice;
+
   @Consumption.valueHelpDefinition: [{entity: {name: 'I_CurrencyStdVH',
                                      element: 'Currency' },
                                      useForValidation: true }]
   CurrencyCode;
+
   @UI: { lineItem:       [ { position: 90, importance: #MEDIUM } ] ,
          identification: [ { position: 90 } ] }
   Description;
+
   @UI: { lineItem:       [ { position: 99, importance: #HIGH } ] ,
          identification: [ { position: 99, label: 'Status' } ],
          selectionField: [{ position: 40 }],
@@ -68,8 +74,11 @@ annotate entity ZC_TRAVEL_468 with
   @Consumption.valueHelpDefinition: [{ entity : {name: '/DMO/I_Overall_Status_VH',
                                        element: 'OverallStatus'  } }]
   OverallStatus;
+
   @UI.hidden: true
   OverallStatusText;
+
   @UI.hidden: true
   LocalLastChangedAt;
+
 }
