@@ -10,7 +10,10 @@ CLASS zcl_carga_inicial DEFINITION
   PRIVATE SECTION.
 ENDCLASS.
 
-CLASS zcl_carga_inicial IMPLEMENTATION.
+
+
+CLASS ZCL_CARGA_INICIAL IMPLEMENTATION.
+
 
   METHOD if_oo_adt_classrun~main.
 
@@ -106,5 +109,4 @@ CLASS zcl_carga_inicial IMPLEMENTATION.
     ENDIF.
 
   ENDMETHOD.
-
 ENDCLASS.

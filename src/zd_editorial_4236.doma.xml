@@ -10,7 +10,6 @@
     <OUTPUTLEN>000020</OUTPUTLEN>
     <DDTEXT>zd_editorial</DDTEXT>
     <DOMMASTER>E</DOMMASTER>
-    <ABAP_LANGUAGE_VERSION>5</ABAP_LANGUAGE_VERSION>
    </DD01V>
   </asx:values>
  </asx:abap>

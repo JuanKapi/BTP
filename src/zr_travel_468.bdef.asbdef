@@ -1,0 +1,110 @@
+managed implementation in class zbp_r_travel_468 unique;
+strict ( 2 );
+with draft;
+
+define behavior for ZR_TRAVEL_468 alias Travel
+implementation in class zbp_r_travel_468 unique
+persistent table ztb_travel_468
+draft table ztb_travel_468d
+lock master
+total etag LastChangedAt
+authorization master ( global, instance )
+etag master LocalLastChangedAt
+{
+  create;
+  update;
+  delete;
+  association _Booking { create ( features : instance, authorization : update ); with draft; }
+
+  field ( numbering : managed, readonly ) TravelUuid;
+  field ( readonly ) TravelId, OverallStatus, TotalPrice, LocalCreatedAt, LocalCreatedBy, LastChangedAt, LocalLastChangedBy;
+  field ( mandatory ) CustomerId, AgencyId, BeginDate, EndDate;
+  field ( features : instance ) BookingFee;
+
+  action ( features : instance, authorization : update ) acceptTravel result [1] $self;
+  action ( features : instance, authorization : update ) rejectTravelTravel result [1] $self;
+  action ( features : instance, authorization : update ) deducDiscount parameter za_travel_disc result [1] $self;
+
+  internal action reCalcTotalPrice;
+
+  determination setTravelNumber on save { create; }
+  determination setStatusToOpen on modify { create; }
+
+
+  validation validateCustomer on save { create; field CustomerId; }
+  validation validateAgency on save { create; field AgencyID; }
+  validation validateDates on save { create; field BeginDate, EndDate; }
+
+  draft action Resume with additional implementation;
+  draft action Edit;
+  draft action Activate optimized;
+  draft action Discard;
+
+  draft determine action Prepare
+  {
+    validation validateAgency;
+    validation validateCustomer;
+    validation validateDates;
+    validation Booking~validateCustomer;
+    validation Booking~validateConnection;
+  }
+
+  mapping for ztb_travel_468
+    {
+      AgencyId           = agency_id;
+      BeginDate          = begin_date;
+      BookingFee         = booking_fee;
+      CustomerId         = customer_id;
+      Description        = description;
+      EndDate            = end_date;
+      LastChangedAt      = last_changed_at;
+      LocalCreatedAt     = local_created_at;
+      LocalCreatedBy     = local_created_by;
+      LocalLastChangedAt = local_last_changed_at;
+      LocalLastChangedBy = local_last_changed_by;
+      OverallStatus      = overall_status;
+      TotalPrice         = total_price;
+      TravelId           = travel_id;
+      TravelUuid         = travel_uuid;
+    }
+}
+
+
+define behavior for ZR_BOOKING_468 alias Booking
+implementation in class zbp_r_booking_468 unique
+persistent table ztb_booking_468
+draft table ztb_booking_468d
+lock dependent by _Travel
+authorization dependent by _Travel
+etag master LocalLastChangedAt
+{
+  update;
+  delete;
+  association _Travel { with draft; }
+  field ( numbering : managed, readonly ) BookingUuid;
+  field ( readonly ) TravelUuid, BookingId, BookingDate, LocalLastChangedAt;
+  field ( mandatory ) CustomerId, AirlineID, ConnectionId, FlightDate;
+
+  determination setBookingNumber on save { create; }
+  determination setBookingDate on save {create;}
+  determination calculateConnection on save {create; field AirlineID, ConnectionId, FlightDate;}
+
+  validation validateCustomer on save {create; field CustomerId;}
+  validation validateConnection on save {create;field AirlineID, ConnectionId, FlightDate;}
+
+  mapping for ztb_booking_468
+    {
+      AirlineID          = carrier_id;
+      BookingDate        = booking_date;
+      BookingId          = booking_id;
+      BookingStatus      = booking_status;
+      BookingUuid        = booking_uuid;
+      ConnectionId       = connection_id;
+      CurrencyCode       = currency_code;
+      CustomerId         = customer_id;
+      FlightDate         = flight_date;
+      LocalLastChangedAt = local_last_changed_at;
+      TravelUuid         = parent_uuid;
+    }
+
+}

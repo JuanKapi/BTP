@@ -2,7 +2,7 @@
 @EndUserText.label: 'Travel - Root Entity'
 define root view entity ZR_TRAVEL_468
   as select from ztb_travel_468
-  composition [0..*] of zr_booking_468           as _Booking
+  composition [0..*] of ZR_BOOKING_468           as _Booking
   association [0..1] to /DMO/I_Agency            as _Agency        on $projection.AgencyId      = _Agency.AgencyID
   association [0..1] to /DMO/I_Customer          as _Customer      on $projection.CustomerId    = _Customer.CustomerID
   association [1..1] to /DMO/I_Overall_Status_VH as _OverallStatus on $projection.OverallStatus = _OverallStatus.OverallStatus
