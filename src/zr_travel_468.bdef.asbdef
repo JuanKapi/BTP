@@ -1,4 +1,4 @@
-managed implementation in class zbp_r_travel_468 unique;
+managed;
 strict ( 2 );
 with draft;
 
@@ -22,14 +22,13 @@ etag master LocalLastChangedAt
   field ( features : instance ) BookingFee;
 
   action ( features : instance, authorization : update ) acceptTravel result [1] $self;
-  action ( features : instance, authorization : update ) rejectTravelTravel result [1] $self;
+  action ( features : instance, authorization : update ) rejectTravel result [1] $self;
   action ( features : instance, authorization : update ) deducDiscount parameter za_travel_disc result [1] $self;
 
   internal action reCalcTotalPrice;
 
   determination setTravelNumber on save { create; }
   determination setStatusToOpen on modify { create; }
-
 
   validation validateCustomer on save { create; field CustomerId; }
   validation validateAgency on save { create; field AgencyID; }
