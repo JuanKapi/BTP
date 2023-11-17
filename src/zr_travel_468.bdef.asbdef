@@ -11,9 +11,10 @@ total etag LastChangedAt
 authorization master ( global, instance )
 etag master LocalLastChangedAt
 {
-  create;
-  update;
+  create (precheck);
+  update (precheck);
   delete;
+
   association _Booking { create ( features : instance, authorization : update ); with draft; }
 
   field ( numbering : managed, readonly ) TravelUuid;
@@ -29,6 +30,7 @@ etag master LocalLastChangedAt
 
   determination setTravelNumber on save { create; }
   determination setStatusToOpen on modify { create; }
+  determination CalculateTotalPrice on modify { create; field BookingFee, CurrencyCode; }
 
   validation validateCustomer on save { create; field CustomerId; }
   validation validateAgency on save { create; field AgencyID; }

@@ -25,6 +25,12 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
     METHODS get_global_authorizations FOR GLOBAL AUTHORIZATION
       IMPORTING REQUEST requested_authorizations FOR Travel RESULT result.
 
+    METHODS precheck_create FOR PRECHECK
+      IMPORTING entities FOR CREATE Travel.
+
+    METHODS precheck_update FOR PRECHECK
+      IMPORTING entities FOR UPDATE Travel.
+
     METHODS acceptTravel FOR MODIFY
       IMPORTING keys FOR ACTION Travel~acceptTravel RESULT result.
 
@@ -54,8 +60,6 @@ CLASS lhc_Travel DEFINITION INHERITING FROM cl_abap_behavior_handler.
 
     METHODS validateDates FOR VALIDATE ON SAVE
       IMPORTING keys FOR Travel~validateDates.
-
-***
 
     METHODS is_create_granted
       IMPORTING country_code          TYPE land1  OPTIONAL
@@ -156,19 +160,163 @@ CLASS lhc_Travel IMPLEMENTATION.
 
       IF sy-subrc = 0.
 
-        IF lv_update_granted = is_update_granted(  <travel_agency_country_code>-country_code ).
+        IF lv_update_requested = abap_true.
+
+          lv_update_granted = is_update_granted(  <travel_agency_country_code>-country_code ).
+
+          IF lv_update_granted = abap_false.
+
+            APPEND VALUE #( %tky = travel-%tky
+                         %msg = NEW /dmo/cm_flight_messages(
+                         textid = /dmo/cm_flight_messages=>not_authorized_for_agencyid
+                         agency_id = travel-AgencyId
+                         severity = if_abap_behv_message=>severity-error )
+                         %element-agencyid = if_abap_behv=>mk-on )
+                         TO reported-travel.
+
+          ENDIF.
+
+
+        ENDIF.
+
+      ELSE.
+
+        lv_update_granted = lv_delete_granted = is_create_granted(  ).
+        IF lv_update_granted = abap_false.
+
+          APPEND VALUE #( %tky = travel-%tky
+                       %msg = NEW /dmo/cm_flight_messages(
+                       textid = /dmo/cm_flight_messages=>not_authorized_for_agencyid
+                       agency_id = travel-AgencyId
+                       severity = if_abap_behv_message=>severity-error )
+                       %element-agencyid = if_abap_behv=>mk-on )
+                       TO reported-travel.
 
         ENDIF.
       ENDIF.
 
+      APPEND VALUE #( LET upd_auth = COND #( WHEN lv_update_granted = abap_true
+                    THEN if_abap_behv=>auth-allowed
+                    ELSE if_abap_behv=>auth-unauthorized )
+                    del_auth = COND #( WHEN lv_delete_granted = abap_true
+                    THEN if_abap_behv=>auth-allowed
+                    ELSE if_abap_behv=>auth-unauthorized ) IN %tky = travel-%tky
+                   %update = upd_auth
+                   %action-edit = upd_auth
+                   %delete = del_auth ) TO result.
+
+
     ENDLOOP.
+
 
   ENDMETHOD.
 
   METHOD get_global_authorizations.
+
+    IF  requested_authorizations-%create EQ if_abap_behv=>mk-on.
+      IF is_create_granted(  ) = abap_true.
+
+        result-%create = if_abap_behv=>auth-allowed.
+
+      ELSE.
+
+        result-%create = if_abap_behv=>auth-unauthorized.
+
+        APPEND VALUE #( %msg = NEW /dmo/cm_flight_messages(
+             textid = /dmo/cm_flight_messages=>not_authorized
+             severity = if_abap_behv_message=>severity-error )
+             %global = if_abap_behv=>mk-on )
+             TO reported-travel.
+
+      ENDIF.
+
+    ENDIF.
+
+    IF requested_authorizations-%update EQ if_abap_behv=>mk-on OR
+       requested_authorizations-%action-edit EQ if_abap_behv=>mk-on.
+
+      IF is_update_granted(  ) = abap_true.
+
+        result-%update = if_abap_behv=>auth-allowed.
+
+      ELSE.
+
+        result-%update = if_abap_behv=>auth-unauthorized.
+
+        APPEND VALUE #(
+                    %msg        = NEW /dmo/cm_flight_messages(
+                    textid      = /dmo/cm_flight_messages=>not_authorized
+                    severity    = if_abap_behv_message=>severity-error )
+                    %global     = if_abap_behv=>mk-on )
+                    TO reported-travel.
+
+      ENDIF.
+
+    ENDIF.
+
+    IF requested_authorizations-%delete EQ if_abap_behv=>mk-on.
+
+      IF is_create_granted(  ) = abap_true.
+
+        result-%delete = if_abap_behv=>auth-allowed.
+
+      ELSE.
+
+        result-%delete = if_abap_behv=>auth-unauthorized.
+
+        APPEND VALUE #(
+                    %msg        = NEW /dmo/cm_flight_messages(
+                    textid      = /dmo/cm_flight_messages=>not_authorized
+                    severity    = if_abap_behv_message=>severity-error )
+                    %global     = if_abap_behv=>mk-on )
+                    TO reported-travel.
+      ENDIF.
+    ENDIF.
+
+  ENDMETHOD.
+
+  METHOD precheck_create.
+
+    precheck_auth(
+    EXPORTING
+    entities_create = entities
+    CHANGING
+    failed  = failed-travel
+    reported = reported-travel
+    ).
+
+  ENDMETHOD.
+
+  METHOD precheck_update.
+
+    precheck_auth(
+    EXPORTING
+    entities_update = entities
+    CHANGING
+    failed  = failed-travel
+    reported = reported-travel
+    ).
+
   ENDMETHOD.
 
   METHOD acceptTravel.
+
+    MODIFY ENTITIES OF zr_travel_468 IN LOCAL MODE
+    ENTITY travel
+    UPDATE FIELDS ( OverallStatus )
+    WITH VALUE #( FOR key IN keys ( %tky = key-%tky
+              overallstatus = travel_status-accepted ) ).
+
+    READ ENTITIES OF zr_travel_468 IN LOCAL MODE
+    ENTITY travel
+    ALL FIELDS WITH CORRESPONDING #( keys )
+    RESULT DATA(travels) .
+
+    result = VALUE #( FOR <travel> IN travels (
+                            %tky = <travel>-%tky
+                            %param = <travel> ) ).
+
+
   ENDMETHOD.
 
   METHOD deducDiscount.
@@ -233,9 +381,96 @@ CLASS lhc_Travel IMPLEMENTATION.
   ENDMETHOD.
 
   METHOD reCalcTotalPrice.
+
+    TYPES: BEGIN OF ty_amount_per_currencycode,
+             amount        TYPE /dmo/total_price,
+             currency_code TYPE /dmo/currency_code,
+           END OF ty_amount_per_currencycode.
+
+    DATA: lt_amount_per_currencycode TYPE STANDARD TABLE OF ty_amount_per_currencycode.
+
+    READ ENTITIES OF zr_travel_468  IN LOCAL MODE
+            ENTITY Travel
+            FIELDS ( bookingFee Currencycode )
+            WITH CORRESPONDING #( keys )
+            RESULT DATA(lt_travels).
+
+    DELETE lt_travels WHERE CurrencyCode IS INITIAL.
+
+    READ ENTITIES OF zr_travel_468  IN LOCAL MODE
+        ENTITY Travel BY \_booking
+        FIELDS ( FlightPrice Currencycode )
+        WITH CORRESPONDING #( lt_travels )
+        LINK DATA(lt_booking_links_)
+        RESULT DATA(lt_bookings).
+
+    LOOP AT lt_travels ASSIGNING FIELD-SYMBOL(<travel>).
+
+      lt_amount_per_currencycode = VALUE #( ( amount = <travel>-BookingFee
+              currency_code = <travel>-CurrencyCode ) ).
+
+      LOOP AT lt_booking_links_ INTO DATA(booking_link) USING KEY id WHERE source-%tky = <travel>-%tky.
+
+        DATA(booking) = lt_bookings[ KEY id %tky = booking_link-target-%tky ].
+
+        COLLECT VALUE   ty_amount_per_currencycode(
+                        amount          = booking-flightprice
+                        currency_code   = booking-currencycode )
+                        into lt_amount_per_currencycode.
+
+
+      ENDLOOP.
+
+      DELETE lt_amount_per_currencycode WHERE currency_code IS INITIAL.
+
+      CLEAR <travel>-TotalPrice.
+
+      LOOP AT lt_amount_per_currencycode INTO DATA(ls_amount_per_currencycode).
+        IF ls_amount_per_currencycode-currency_code = <travel>-CurrencyCode.
+          <travel>-TotalPrice = ls_amount_per_currencycode-amount.
+        ELSE.
+
+
+          /dmo/cl_flight_amdp=>convert_currency( EXPORTING iv_amount                  = ls_amount_per_currencycode-amount
+                                                           iv_currency_code_source    = ls_amount_per_currencycode-currency_code
+                                                           iv_currency_code_target    = <travel>-CurrencyCode
+                                                           iv_exchange_rate_date      = cl_abap_context_info=>get_system_date(  )
+                                                  IMPORTING
+                                                           ev_amount                  = DATA(lv_total_book_price_per_curr) ).
+
+          <travel>-TotalPrice += lv_total_book_price_per_curr.
+
+
+        ENDIF.
+
+      ENDLOOP.
+
+    ENDLOOP.
+
+    MODIFY ENTITIES OF zr_travel_468 IN LOCAL MODE
+            ENTITY travel
+            UPDATE FIELDS ( TotalPrice )
+            WITH CORRESPONDING #(  lt_travels ).
+
   ENDMETHOD.
 
   METHOD rejectTravelTravel.
+
+    MODIFY ENTITIES OF zr_travel_468 IN LOCAL MODE
+            ENTITY travel
+            UPDATE FIELDS ( Overallstatus )
+            WITH VALUE #( FOR key IN keys ( %tky = key-%tky
+                    overallstatus = travel_status-rejected ) ).
+
+    READ ENTITIES OF zr_travel_468  IN LOCAL MODE
+            ENTITY Travel
+            ALL FIELDS WITH CORRESPONDING #( keys )
+            RESULT DATA(travels).
+
+    result = VALUE #( FOR <travel> IN travels (  %tky   = <travel>-%tky
+                                                 %param = <travel> )  ).
+
+
   ENDMETHOD.
 
   METHOD Resume.
@@ -260,15 +495,15 @@ CLASS lhc_Travel IMPLEMENTATION.
 
     IF country_code IS SUPPLIED.
       AUTHORITY-CHECK OBJECT 'DMO/TRVL'
-        ID  '/DMO/CNTRY' FIELD country_code
-        ID  'ACTVT'      FIELD '01'.
+      ID  '/DMO/CNTRY' FIELD country_code
+      ID  'ACTVT'      FIELD '01'.
 
       create_granted = COND #( WHEN sy-subrc = 0 THEN abap_true ELSE abap_false ).
 
     ELSE.
       AUTHORITY-CHECK OBJECT 'DMO/TRVL'
-          ID  '/DMO/CNTRY'    DUMMY
-          ID 'ACTVT'          FIELD '01'.
+      ID  '/DMO/CNTRY'    DUMMY
+      ID 'ACTVT'          FIELD '01'.
 
       create_granted  = COND #( WHEN sy-subrc = 0 THEN abap_true ELSE abap_false ).
 
@@ -325,8 +560,8 @@ CLASS lhc_Travel IMPLEMENTATION.
     ELSE.
 
       AUTHORITY-CHECK OBJECT 'DMO/TRVL'
-       ID  '/DMO/CNTRY'    DUMMY
-       ID 'ACTVT'          FIELD '02'.
+      ID  '/DMO/CNTRY'    DUMMY
+      ID 'ACTVT'          FIELD '02'.
 
       update_granted = COND #( WHEN sy-subrc = 0 THEN abap_true ELSE abap_false ).
 
@@ -358,7 +593,7 @@ CLASS lhc_Travel IMPLEMENTATION.
 
     DELETE entities WHERE %control-AgencyID = if_abap_behv=>mk-off.
 
-    agencies = CORRESPONDING #( entities DISCARDING DUPLICATES mapping agency_id = AgencyID except * ).
+    agencies = CORRESPONDING #( entities DISCARDING DUPLICATES MAPPING agency_id = AgencyID EXCEPT * ).
 
     CHECK agencies IS NOT INITIAL.
 
@@ -400,15 +635,12 @@ CLASS lhc_Travel IMPLEMENTATION.
                                 textid = /dmo/cm_flight_messages=>not_authorized_for_agencyid
                                 agency_id = entity-AgencyId
                                 severity = if_abap_behv_message=>severity-error )
-                                %element-agencyid = if_abap_behv=>mk-on ) to reported.
+                                %element-agencyid = if_abap_behv=>mk-on ) TO reported.
 
 
 
       ENDIF.
     ENDLOOP.
-
-
-
 
   ENDMETHOD.
 
